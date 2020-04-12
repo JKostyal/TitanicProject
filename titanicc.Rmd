@@ -1,0 +1,77 @@
+---
+title: "Titanic Classification in R"
+author: "Joseph Kostyal"
+date: "4/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Load train/test sets and merge into one
+
+```{r}
+setwd("C:/Users/joeyk/Desktop/Other/titanic")
+
+Titanic.train = read.csv("train.csv",stringsAsFactors = FALSE,header=TRUE)
+Titanic.test=read.csv("test.csv",stringsAsFactors = FALSE,header=TRUE)
+Titanic.train$IsTrainSet=TRUE
+Titanic.test$IsTrainSet=FALSE
+Titanic.test$Survived=NA
+
+Titanic=rbind(Titanic.train,Titanic.test)
+```
+
+Filling in NA Values
+```{r}
+Titanic$Embarked == ''
+Titanic[Titanic$Embarked=='', "Embarked"] = 'S'
+
+age.median = median(Titanic$Age,na.rm=TRUE)
+Titanic[is.na(Titanic$Age), "Age"]= age.median
+
+fare.median=median(Titanic$Fare,na.rm=TRUE)
+Titanic[is.na(Titanic$Fare), "Fare"]=fare.median
+
+```
+
+Turning Categorical values into numerical values... 
+... Data cleaning complete!
+```{r}
+Titanic$Pclass=as.factor(Titanic$Pclass)
+Titanic$Sex=as.factor(Titanic$Sex)
+Titanic$Embarked=as.factor(Titanic$Embarked)
+```
+... Data cleaning complete!
+----------------------------
+Now full titanic set split back into test/train sets
+
+```{r}
+Titanic.train=Titanic[Titanic$IsTrainSet==TRUE,]
+Titanic.test=Titanic[Titanic$IsTrainSet==FALSE,]
+
+Titanic.train$Survived=as.factor(Titanic.train$Survived)
+```
+
+Applying model, RandomForest, to predict titanic's survived
+using significant variables
+```{r}
+library(randomForest)
+
+Survived.equation="Survived ~ Pclass + Sex + Age + SibSp + Parch+ + Fare + Embarked"
+Survived.formula=as.formula(Survived.equation)
+Titanic.model = randomForest(Survived.formula,Titanic.train,
+                            ntree=500,mtry=sqrt(7),node=0.01*nrow(Titanic.test))
+Survived.pred=predict(Titanic.model,newdata = Titanic.test)
+
+```
+
+Save survived output to csv and ready to submit @ kaggle competition
+```{r}
+PassengerId=Titanic.test$PassengerId
+output.df=data.frame(PassengerId)
+output.df$Survived = Survived.pred
+
+write.csv(output.df, file = "Titanic.csv",row.names=FALSE)
+```
+
